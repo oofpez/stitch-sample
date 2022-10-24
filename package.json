@@ -1,0 +1,25 @@
+{
+  "name": "stitch-sample",
+  "version": "1.0.0",
+  "description": "sample integration with stitch api",
+  "main": "web/index.js",
+  "scripts": {
+    "test": "",
+    "start": "node web/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oofpez/stitch-sample.git"
+  },
+  "author": "Jan Schoeman (github.com/oofpez)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/oofpez/stitch-sample/issues"
+  },
+  "homepage": "https://github.com/oofpez/stitch-sample#readme",
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-handlebars": "^6.0.6",
+    "request-promise": "^4.2.6"
+  }
+}
