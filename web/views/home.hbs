@@ -1,1 +1,22 @@
 <h2>Greetings Master {{name}}</h2>
+<p>Purchase a new batmobile today?</p>
+
+<a href="http://localhost:3000/auth-user">
+   <button>Yes</button>
+</a>
+
+<p>Other actions</p>
+<button id="checkButton" onclick="console.log('button was clicked');
+  fetch('/auth', {method: 'POST'})
+    .then(function(response) {
+      if(response.ok) {
+        console.log('Click was recorded');
+        return;
+      }
+      throw new Error('Request failed.');
+    })
+    .catch(function(error) {
+      console.log(error);
+    });">Authenticate for WayneCorp payments</button>
+
+

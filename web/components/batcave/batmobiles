@@ -1,0 +1,8 @@
+const batmobiles = 
+{
+    "VTOL": 29000000,
+    "speeder": 8000000,
+    "frog":10000000
+};
+
+module.exports = batmobiles;

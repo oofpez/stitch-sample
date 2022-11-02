@@ -1,0 +1,1 @@
+The client.json config is required here - not included in the repository for security.
