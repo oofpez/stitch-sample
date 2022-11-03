@@ -1,0 +1,18 @@
+<h2>Purchasing:</h2>
+<p>{{model}} - {{price}}</p>
+{{!-- <button id="checkButton" onclick="console.log('button was clicked');
+  fetch('/auth-payment', {method: 'POST'})
+    .then(function(response) {
+      if(response.ok) {
+        console.log('Click was recorded');
+        return;
+      }
+      throw new Error('Request failed.');
+    })
+    .catch(function(error) {
+      console.log(error);
+    });">Confirm, Authenticate for Payment</button> --}}
+
+  <form action="/auth-payment" method="get">
+  <input type="submit" value="Confirm">
+  </form>

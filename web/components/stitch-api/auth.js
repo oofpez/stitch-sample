@@ -68,7 +68,7 @@ async function fetchClientToken()
     .catch(function (err) {
         console.log(err);
         // Something bad happened, handle the error (Todo)
-        return null;
+        throw err;
     })
     return result;
 }
@@ -136,10 +136,4 @@ async function refreshUserToken(refresh){
     return result;
 }
 
-
-function fetchAccountData(){
-
-}
-
-//module.exports = authenticateClient;
 module.exports = {fetchClientToken, authorizeUser,fetchUserToken} ;

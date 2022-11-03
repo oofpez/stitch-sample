@@ -1,1 +1,163 @@
-const query
+const uuidv4 = require('../../helpers/helpers')
+
+function initiatePayment(amount, payerReference, beneficiaryReference,externalReference,beneficiaryName,beneficiaryBankId, beneficiaryAccountNumber)
+{
+    return {
+        query: `mutation CreatePaymentRequest(
+            $amount: MoneyInput!,
+            $payerReference: String!,
+            $beneficiaryReference: String!,
+            $externalReference: String,
+            $beneficiaryName: String!,
+            $beneficiaryBankId: BankBeneficiaryBankId!,
+            $beneficiaryAccountNumber: String!) {
+          clientPaymentInitiationRequestCreate(input: {
+              amount: $amount,
+              payerReference: $payerReference,
+              beneficiaryReference: $beneficiaryReference,
+              externalReference: $externalReference,
+              beneficiary: {
+                  bankAccount: {
+                      name: $beneficiaryName,
+                      bankId: $beneficiaryBankId,
+                      accountNumber: $beneficiaryAccountNumber
+                  }
+              }
+            }) {
+            paymentInitiationRequest {
+              id
+              url
+            }
+          }
+        }`,
+        variables: {
+            amount: {
+                quantity: amount,
+                currency: "ZAR"
+            },
+            payerReference: payerReference,
+            beneficiaryReference: beneficiaryReference,
+            externalReference: externalReference,
+            beneficiaryName: beneficiaryName,
+            beneficiaryBankId: beneficiaryBankId,
+            beneficiaryAccountNumber: beneficiaryAccountNumber
+        }
+    }
+}
+
+function placeHolderPayment(amount) 
+{
+    return initiatePayment(amount,"Batmobile007", "Batmobile007", uuidv4(), "Wayne Enterprizes", "fnb", "12345678" );
+}
+
+function paymentStatus(paymentId)
+{
+    return {
+        query: `query GetPaymentRequestStatus($paymentRequestId: ID!) {
+        node(id: $paymentRequestId) {
+          ... on PaymentInitiationRequest {
+            id
+            url
+            payerReference
+            state {
+              __typename
+              ... on PaymentInitiationRequestCompleted {
+                date
+                amount
+                payer {
+                  ... on PaymentInitiationBankAccountPayer {
+                    accountNumber
+                    bankId
+                  }
+                }
+                beneficiary {
+                  ... on BankBeneficiary {
+                    bankId
+                  }
+                }
+              }
+              ... on PaymentInitiationRequestCancelled {
+                date
+                reason
+              }
+              ... on PaymentInitiationRequestPending {
+                __typename
+                paymentInitiationRequest {
+                  id
+                }
+              }
+              ... on PaymentInitiationRequestExpired {
+                __typename
+                date
+              }
+            }
+          }
+        }
+      }`,
+        variables: {"paymentRequestId": paymentId}
+    }
+}
+
+function paymentStatus(paymentId)
+{
+  return {
+    query: `query RetrievePaymentInitiationRequestConfirmationById($paymentInitiationRequestId: ID!) {
+      node(id: $paymentInitiationRequestId) {
+        ... on PaymentInitiationRequest {
+          id
+          amount
+          paymentConfirmation {
+            ... on PaymentPending {
+              __typename
+              date
+            }
+            ... on PaymentReceived {
+              __typename
+              estimatedSettlement
+              received
+            }
+            ... on PaymentUnsettled {
+              __typename
+              description
+            }
+          }
+        }
+      }
+    }`,
+    variables: {paymentInitiationRequestId: paymentId}
+  }
+}
+
+function paymentSubscription(url){
+  return {
+    query: `subscription InstantPayUpdates($webhookUrl: URL!, $headers: [InputHeader!]) {
+      client(webhook: {url: $webhookUrl, headers: $headers}) {
+        paymentInitiationRequests {
+          node {
+            id
+            externalReference
+            state {
+              __typename
+              ... on PaymentInitiationRequestCompleted {
+                date
+              }
+              ... on PaymentInitiationRequestCancelled {
+                __typename
+                date
+                reason
+              }
+            }
+          }
+          eventId
+          subscriptionId
+          time
+        }
+      }
+    }`,
+    variables: {
+          webhookUrl: url
+      }
+  };
+}
+
+module.exports = {initiatePayment, placeHolderPayment, paymentStatus, paymentSubscription, paymentStatus};

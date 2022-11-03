@@ -1,8 +1,14 @@
 const batmobiles = 
 {
-    "VTOL": 29000000,
-    "speeder": 8000000,
-    "frog":10000000
+    "VTOL": 29,
+    "speeder": 8,
+    "amphibious":10
 };
 
-module.exports = batmobiles;
+function purchase(batmobileType){
+    let cost = batmobiles[batmobileType];
+    console.log("about to purchase a new batmobile for: R", cost);
+    return cost;
+  }
+
+module.exports = {batmobiles, purchase};

@@ -1,13 +1,21 @@
 <h2>Status: {{message}}</h2>
+<p>Accounts: </p>
+<ul class="account_list">
+  {{#each accounts}}
+    <li>{{name}} containing {{currentBalance.quantity}}</li>
+  {{/each}}
+</ul>
+
+
 <div class="display:flex">
     <form action="/purchase" method="get">
     <p>Currently available from Wayne Enterprises:</p>
-     <input type="radio" id="amphibious" name="batmobile" value="frog">
-    <label for="html">Amphibious batmobile - R10 M</label><br>
+     <input type="radio" id="amphibious" name="batmobile" value="amphibious">
+    <label for="html">Amphibious batmobile - R10</label><br>
     <input type="radio" id="speeder" name="batmobile" value="speeder">
-    <label for="css">Speeder batmobile - R8 M</label><br>
+    <label for="css">Speeder batmobile - R8</label><br>
     <input type="radio" id="vtol" name="batmobile" value="VTOL">
-    <label for="javascript">VTOL Batjet - R29 M</label> 
+    <label for="javascript">VTOL Batjet - R29</label> 
     <input type="submit" value="Purchase">
     </form>
 </div>
