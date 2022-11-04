@@ -43,12 +43,22 @@ app.get('/return',async (request,response) => {
   .then(
     async (token) => {
       latestUserToken = token;
-      updateExpiry(token.expires_in);
+      updateExpiry(token.expires_in);     
+      //This flow will never be hit because the token cannot expire after we just received it - it's just an exercise to
+      // test how refreshing tokens work. to enable, mark the if clause as if (true);
+      if (expiry < Date.now() && latestUserToken.refresh_token)
+      {
+        //Flow not properly tested.
+        const newToken = await stitchApi.auth.refreshUserToken(latestUserToken.refresh_token);
+        latestUserToken = newToken;
+        updateExpiry(newToken.expires_in);
+         
+      } 
       return token;
     })
     .then(
       function(token) { return stitchApi.gql(token.access_token,stitchApi.userQueries.listBankAccounts);},
-      function(error) { console.log(error);})
+      function(error) { console.log(error); throw error;})
     .then(
       (accountsResponse) => {
         response.render('return', 
@@ -77,6 +87,7 @@ app.get('/refund',async (_,response) => {
     //initiate the refund
     const refundDetails = stitchApi.clientQueries.createRefundPlaceholder(cost,latestPayment)
     const refundResult = await stitchApi.gql(latestClientToken.access_token,refundDetails.query, refundDetails.variables);
+    //TODO: display details about the refund if any are available.
     response.render('refund');
 });
 
@@ -113,14 +124,6 @@ stitchApi.auth.fetchClientToken()
 });
 
 app.get('/link-payment', async (_,response) =>  {
-  if (expiry < Date.now())
-  {
-    //TODO: test flow
-    const newToken = await stitchApi.auth.refreshUserToken(latestUserToken.refresh_token);
-    latestUserToken = newToken;
-    updateExpiry(newToken.expires_in);
-     
-  } 
   stitchApi.auth.fetchClientToken()
     .then(
       (token) => {
@@ -181,18 +184,8 @@ app.get('/returnlinkpayment', async  (request, response) => {
 });
 
 app.get('/auth-user',(request,response) =>  {
-stitchApi.auth.authorizeUser()
-  .then(
-    (value) => {
-      console.log(value);
-     response.redirect(value);
-    //response.render('clientAuth',{token: value});
-  },(reason) => {
-    console.log(reason);
-    response.statusCode = 500;
-    response.json(reason);
-  }
-);
+const url = stitchApi.auth.authorizeUser();
+     response.redirect(url);
 });
 
 app.get('/link',async (request,response) =>  {

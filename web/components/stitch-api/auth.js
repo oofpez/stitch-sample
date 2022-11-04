@@ -185,7 +185,7 @@ async function refreshUserToken(refresh){
     const body = {
         grant_type: "refresh_token",
         client_id: config.client.id,
-        refreshToken: refresh,
+        refresh_token: refresh,
         client_secret: config.secret.value
     }
 
