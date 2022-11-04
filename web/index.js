@@ -8,6 +8,8 @@ const app = express();
 const subscriptionTestUrl = "https://eo1th4zvfs09cqu.m.pipedream.net";
 console.log("pipedream:", subscriptionTestUrl);
 
+//Stateful objects used to maintain client tokens, payment ids, etc.
+//Ideally these are passed as parameters between pages or stored in a user's session rather than the nodejs server.
 let latestUserToken = null;
 let latestClientToken = null;
 let latestPayment = null;

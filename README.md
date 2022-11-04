@@ -1,5 +1,5 @@
 # stitch-sample
-sample integration with stitch
+sample integration with stitch. Batman uses stitch to faciliate payments between his alter-ego Bruce Wayne and himself to purchase fancy cars.
 
 This project covers the basic functionality of a stitch API integration.
 
