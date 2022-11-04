@@ -1,4 +1,5 @@
 const uuidv4 = require('../../helpers/helpers')
+const verifier = require('../verifier')
 
 function initiatePayment(amount, payerReference, beneficiaryReference,externalReference,beneficiaryName,beneficiaryBankId, beneficiaryAccountNumber)
 {
@@ -160,4 +161,86 @@ function paymentSubscription(url){
   };
 }
 
-module.exports = {initiatePayment, placeHolderPayment, paymentStatus, paymentSubscription, paymentStatus};
+function refundSubscription(url){
+  return {
+    query: `subscription RefundUpdates($webhookUrl: URL!, $headers: [InputHeader!])  {
+      client(webhook: {url: $webhookUrl, headers: $headers}) {
+        refunds {
+          node {
+            status {
+              ... on RefundSubmitted {
+                __typename
+                date
+              }
+              ... on RefundCompleted {
+                __typename
+                date
+                expectedSettlement
+              }
+              ... on RefundError {
+                __typename
+                date
+                reason
+              }
+            }
+            reason
+            id
+            created
+            amount
+            beneficiaryReference
+          }
+          eventId
+          subscriptionId
+          time
+        }
+      }
+    }`,
+    variables: {
+          webhookUrl: url
+      }
+  };
+}
+
+function createRefund(amount, paymentId, beneficiaryReference,nonce,reason){
+  return {
+    query: `mutation CreateRefund(
+      $amount: MoneyInput!,
+      $reason: RefundReason!,
+      $nonce: String!,
+      $beneficiaryReference: String!,
+      $paymentRequestId: ID!
+  ) {
+    clientRefundInitiate(input: {
+        amount: $amount,
+        reason: $reason,
+        nonce: $nonce,
+        beneficiaryReference: $beneficiaryReference,
+        paymentRequestId: $paymentRequestId
+      }) {
+      refund {
+        id
+        paymentInitiationRequest {
+          id
+        }
+      }
+    }
+  }`,
+  variables:
+    {
+        amount: {
+            quantity: amount,
+            currency: "ZAR"
+        },
+        reason: reason,
+        nonce: nonce,
+        beneficiaryReference: beneficiaryReference,
+        paymentRequestId: paymentId
+    }
+  }
+}
+
+function createRefundPlaceholder(amount, paymentId){
+ return createRefund(amount,paymentId,"Batmobile007",verifier.generateRandomStateOrNonce(),"fraudulent");
+}
+
+module.exports = {initiatePayment, placeHolderPayment, paymentStatus, paymentSubscription,refundSubscription, createRefund, createRefundPlaceholder, paymentStatus};

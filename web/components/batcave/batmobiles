@@ -5,10 +5,10 @@ const batmobiles =
     "amphibious":10
 };
 
-function purchase(batmobileType){
+function priceCheck(batmobileType){
     let cost = batmobiles[batmobileType];
     console.log("about to purchase a new batmobile for: R", cost);
     return cost;
   }
 
-module.exports = {batmobiles, purchase};
+module.exports = {batmobiles, priceCheck};

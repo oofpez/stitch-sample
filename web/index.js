@@ -59,39 +59,26 @@ app.get('/return',async (request,response) => {
           message: reason
         });
       }
-    });     
+});     
 
 app.get('/purchase',async (request,response) => {
-  try {
-    if (expiry < Date.now()){
-      await stitchApi.auth.refreshUserToken(latestUserToken.refresh_token).then(
-        (token) => {
-          latestUserToken = token;
-          updateExpiry(token.expires_in);
-          cost = bat.purchase(request.query.batmobile);
-          response.render('confirm', {
-            model: `Model: ${request.query.batmobile.toUpperCase()}`,
-            price: `Price: ${cost}`});
-        },
-        (reason) => {
-          console.log(error);
-          response.render('error', {
-            message: reason
-          });
-        });      
-    } else {
-      cost = bat.purchase(request.query.batmobile);
+      cost = bat.priceCheck(request.query.batmobile);
       response.render('confirm', {
         model: `Model: ${request.query.batmobile.toUpperCase()}`,
         price: `Price: ${cost}`});
-    }
-  }
-  catch (err){
-    response.render('error', {message: err});
-  }
-}) 
+});
 
-app.get('/auth-payment',(request,response) =>  {
+app.get('/refund',async (_,response) => {   
+    //subscribe refund changes to webhook (fire and forget)
+    const subscriptionDetails = stitchApi.clientQueries.refundSubscription(subscriptionTestUrl);
+    stitchApi.gql(latestClientToken.access_token, subscriptionDetails.query, subscriptionDetails.variables);
+    //initiate the refund
+    const refundDetails = stitchApi.clientQueries.createRefundPlaceholder(cost,latestPayment)
+    const refundResult = await stitchApi.gql(latestClientToken.access_token,refundDetails.query, refundDetails.variables);
+    response.render('refund');
+});
+
+app.get('/auth-payment',(_,response) =>  {
 stitchApi.auth.fetchClientToken()
   .then(
     (token) => {
@@ -121,9 +108,57 @@ stitchApi.auth.fetchClientToken()
       response.render('error',{message: reason});
     }
   );
-})
+});
 
-app.get('/returnpayment', async  (request, response) => {
+app.get('/link-payment', async (_,response) =>  {
+  if (expiry < Date.now())
+  {
+    //TODO: test flow
+    const newToken = await stitchApi.auth.refreshUserToken(latestUserToken.refresh_token);
+    latestUserToken = newToken;
+    updateExpiry(newToken.expires_in);
+     
+  } 
+  stitchApi.auth.fetchClientToken()
+    .then(
+      (token) => {
+        //save the token for this session to reuse.
+        latestClientToken = token;     
+        //subscribe payment changes to webhook (fire and forget)
+        const subscriptionDetails = stitchApi.clientQueries.paymentSubscription(subscriptionTestUrl);
+        stitchApi.gql(token.access_token, subscriptionDetails.query, subscriptionDetails.variables);
+        //initiate the payment
+        const paymentDetails = stitchApi.userQueries.placeHolderPayment(cost);
+        return stitchApi.gql(latestUserToken.access_token,paymentDetails.query, paymentDetails.variables)
+        //response.render('clientAuth',{token: value});
+      },
+      (reason) => {
+        console.log(reason);
+        response.render('error',{message: reason});
+      })
+    .then(
+      (result) => {
+        if ( result.errors && result.errors.length > 0 && result.errors[0].extensions.code === 'USER_INTERACTION_REQUIRED') {
+            //MFA required
+            latestPayment = result.errors[0].extensions.id;
+            const mfaUrl = result.errors[0].extensions.userInteractionUrl;    
+            response.redirect(`${mfaUrl}?redirect_uri=http://localhost:3000/returnlinkpayment`); 
+        } else {
+          //TODO: test this flow;
+          latestPayment = result.data.userInitiatePayment.paymentInitiation.id;
+          response.redirect(`http://localhost:3000/returnlinkpayment?status=${result.data.userInitiatePayment.paymentInitiation.status.__typename}`)
+        }
+      },
+      (reason) => {
+        console.log(reason);
+        response.render('error',{message: reason});
+      }
+    );
+
+  
+});
+
+app.get('/returnpayment', async  (_, response) => {
   //todo
   const paymentStatus = stitchApi.clientQueries.paymentStatus(latestPayment);
   stitchApi.gql(latestClientToken.access_token, paymentStatus.query, paymentStatus.variables).then(
@@ -135,7 +170,13 @@ app.get('/returnpayment', async  (request, response) => {
       response.render('error',{message: reason});
     }
   );
-})
+});
+
+app.get('/returnlinkpayment', async  (request, response) => {
+  //todo
+  const status = request.query.status;
+  response.render('returnPayment', {paymentStatus: status});
+});
 
 app.get('/auth-user',(request,response) =>  {
 stitchApi.auth.authorizeUser()
@@ -150,8 +191,32 @@ stitchApi.auth.authorizeUser()
     response.json(reason);
   }
 );
-})
+});
 
+app.get('/link',async (request,response) =>  {
+  await stitchApi.auth.fetchClientToken()
+  .then(
+    (token) => {
+      //save the token for this session to reuse.
+      latestClientToken = token;     
+      return token;
+    })
+  .then(async (t) => await stitchApi.auth.createSamplePaymentAuthorization(t.access_token))
+  .then(
+    (value) => {
+      console.log(value);
+     const url = stitchApi.auth.authorizeUser(
+      value.data.clientPaymentAuthorizationRequestCreate.authorizationRequestUrl,
+      "http://localhost:3000/return"
+      );
+     response.redirect(url);
+    //response.render('clientAuth',{token: value});
+  },(reason) => {
+    console.log(reason);
+    response.statusCode = 500;
+    response.json(reason);
+  });
+});
 
-
+app.use(express.static(__dirname + '/public'));
 app.listen(3000)

@@ -1,5 +1,56 @@
-const accounts = {
-    listBankAccounts: "query ListBankAccounts { user { bankAccounts {  name, currentBalance }}}"
+
+listBankAccounts = "query ListBankAccounts { user { bankAccounts {  name, currentBalance }}}"
+retreiveLinkedAccountData = `query GetLinkedAccountInfo {  
+  user {
+    paymentAuthorization {
+      bankAccount {
+          id
+          name
+          accountNumber
+          accountType
+          bankId
+          availableBalance
+          currentBalance
+      }
+    }
+  }
+}`
+
+function initiatePayment(amount, payerReference, externalReference){
+  return {
+    query: `mutation UserInitiatePayment(
+      $amount: MoneyInput!,
+      $payerReference: String!,
+      $externalReference: String) {  
+    userInitiatePayment(input: {
+        amount: $amount,
+        payerReference: $payerReference,
+        externalReference: $externalReference
+      }) {
+      paymentInitiation {
+        amount
+        date
+        id
+        status {
+          __typename
+        }
+      }
+    }
+  }`,
+  variables: {
+    amount: {
+        quantity: amount,
+        currency: "ZAR"
+    },
+    payerReference: payerReference,
+    externalReference: externalReference
+}
+  }
 }
 
-module.exports = accounts;
+function placeHolderPayment(amount) 
+{
+    return initiatePayment(amount,"Batmobile007", "Batmobile007");
+}
+
+module.exports = {listBankAccounts,retreiveLinkedAccountData, initiatePayment, placeHolderPayment};

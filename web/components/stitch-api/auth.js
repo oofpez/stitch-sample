@@ -15,7 +15,7 @@ const clientScopes = [
         "client_disbursement"
     ];
 
-function buildAuthorizationUrl(clientId, challenge, redirectUri, state, nonce, scopes) {
+function buildAuthorizationUrl(baseUrl,clientId, challenge, redirectUri, state, nonce, scopes) {
     const search = {
             client_id: clientId,
             code_challenge: challenge,
@@ -27,15 +27,18 @@ function buildAuthorizationUrl(clientId, challenge, redirectUri, state, nonce, s
             state: state
     };
     const searchString = Object.entries(search).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-    return `https://secure.stitch.money/connect/authorize?${searchString}`;
+    return `${baseUrl}?${searchString}`;
 }
 
-async function authorizeUser()
+function authorizeUser(
+    url = "https://secure.stitch.money/connect/authorize",
+    callback = "http://localhost:3000/return")
 {
     return buildAuthorizationUrl(
+        url,
         config.client.id,
         pkce.code_challenge,
-        "http://localhost:3000/return",
+        callback,
         CSRFstate,
         verifier.generateRandomStateOrNonce(),
         config.client.allowedScopes
@@ -71,6 +74,78 @@ async function fetchClientToken()
         throw err;
     })
     return result;
+}
+
+async function createSamplePaymentAuthorization(accessToken)
+{
+
+    const body = 
+    {
+        query: `mutation CreateAccountLinkingRequest {
+            clientPaymentAuthorizationRequestCreate(input: {
+              beneficiary: {
+                bankAccount: {
+                  name: "Sample Account", 
+                  bankId: absa, 
+                  accountNumber: "1234567890", 
+                  accountType: current, 
+                  beneficiaryType: private, 
+                  reference: "TestBeneficiary"
+                }
+              }, payer: {        
+                email: "sampleuser@example.com",       
+                name: "Sample User", 
+                reference: "TestPayer",
+                phoneNumber: "27821234567"
+            }}) {
+              authorizationRequestUrl
+            }}`,
+        variables: `{
+            "input": {
+              "beneficiary": {
+                "bankAccount": {
+                  "name": "Sample Account",
+                  "bankId": "absa",
+                  "accountNumber": "1234567890",
+                  "accountType": "current",
+                  "beneficiaryType": "private",
+                  "reference": "TestBeneficiary"
+                }
+              },
+              "payer": {
+                "name": "Sample User",
+                "email": "sampleuser@example.com",
+                "phoneNumber": "27821234567",
+                "reference": "TestPayer"
+              }
+            }
+          }`
+    }
+
+    const bodyString = Object.entries(body).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  
+    const send = {
+          method: 'POST',
+          body: bodyString,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', "Authorization": `Bearer ${accessToken}`},
+          uri: 'https://api.stitch.money/graphql'
+    }
+
+    try {
+        // Wait for the result of waitAndMaybeReject() to settle,
+        // and assign the fulfilled value to fulfilledValue:
+        const response = await request(send);
+        // If the result of waitAndMaybeReject() rejects, our code
+        // throws, and we jump to the catch block.
+        // Otherwise, this block continues to run:
+        console.log("GraphQL response: ", response)
+        return JSON.parse(response);
+    } 
+    catch (e) 
+    {
+        console.log(e);
+        throw e;
+    }
 }
 
 async function fetchUserToken(authCode)
@@ -136,4 +211,6 @@ async function refreshUserToken(refresh){
     return result;
 }
 
-module.exports = {fetchClientToken, authorizeUser,fetchUserToken} ;
+
+
+module.exports = {fetchClientToken, authorizeUser,fetchUserToken, refreshUserToken, createSamplePaymentAuthorization} ;
